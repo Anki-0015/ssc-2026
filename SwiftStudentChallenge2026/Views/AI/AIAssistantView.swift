@@ -19,6 +19,7 @@ struct AIAssistantView: View {
     @State private var pendingSuggestion = ""
     @State private var showNewListAlert = false
     @State private var newListName = ""
+    @State private var selectedSuggestions: Set<String> = []
     
     var body: some View {
         NavigationStack {
@@ -183,20 +184,62 @@ struct AIAssistantView: View {
             HStack {
                 Image(systemName: "sparkle")
                     .font(.caption)
-                    .foregroundColor(.blue)
-                
-                Text("Suggested Items")
+                Text("Suggestions")
                     .font(.caption.bold())
                     .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                
+                Spacer()
+                
+                Button {
+                    let gen = UIImpactFeedbackGenerator(style: .light)
+                    gen.impactOccurred()
+                    if selectedSuggestions.count == chatVM.suggestions.count {
+                        selectedSuggestions.removeAll()
+                    } else {
+                        selectedSuggestions = Set(chatVM.suggestions)
+                    }
+                } label: {
+                    Text(selectedSuggestions.count == chatVM.suggestions.count ? "Deselect All" : "Select All")
+                        .font(.caption.bold())
+                        .foregroundColor(.blue)
+                }
             }
             .padding(.horizontal, 20)
+            .padding(.top, 4)
             
             ForEach(chatVM.suggestions, id: \.self) { suggestion in
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
+                    // Selection toggle
+                    Button {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        if selectedSuggestions.contains(suggestion) {
+                            selectedSuggestions.remove(suggestion)
+                        } else {
+                            selectedSuggestions.insert(suggestion)
+                        }
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .strokeBorder(selectedSuggestions.contains(suggestion) ? Color.clear : Color.gray.opacity(0.3), lineWidth: 2)
+                                .background(
+                                    Circle().fill(selectedSuggestions.contains(suggestion) ? Color.blue : Color.clear)
+                                )
+                                .frame(width: 22, height: 22)
+                            
+                            if selectedSuggestions.contains(suggestion) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                    }
+                    
                     Image(systemName: chatVM.determineIcon(for: suggestion))
-                        .font(.system(size: 16))
-                        .foregroundColor(.blue)
-                        .frame(width: 28)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                        .frame(width: 20)
                     
                     Text(suggestion)
                         .font(.body)
@@ -220,20 +263,30 @@ struct AIAssistantView: View {
                 .background(
                     RoundedRectangle(cornerRadius: 14)
                         .fill(Color(.secondarySystemGroupedBackground))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .strokeBorder(
+                                    selectedSuggestions.contains(suggestion) ? Color.blue.opacity(0.4) : Color.clear,
+                                    lineWidth: 1.5
+                                )
+                        )
                 )
                 .padding(.horizontal, 20)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             
-            // New List button — adds all suggestions to a brand-new list
+            // New List button
             Button {
+                if selectedSuggestions.isEmpty {
+                    selectedSuggestions = Set(chatVM.suggestions)
+                }
                 newListName = ""
                 showNewListAlert = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 16))
-                    Text("New List")
+                    Text(selectedSuggestions.isEmpty ? "New List (All \(chatVM.suggestions.count))" : "New List (\(selectedSuggestions.count) selected)")
                         .font(.subheadline.bold())
                 }
                 .foregroundColor(.white)
@@ -273,7 +326,8 @@ struct AIAssistantView: View {
                 let trimmed = newListName.trimmingCharacters(in: .whitespaces)
                 guard !trimmed.isEmpty else { return }
                 
-                let items = chatVM.suggestions.map { suggestion in
+                let itemsToAdd = selectedSuggestions.isEmpty ? chatVM.suggestions : Array(selectedSuggestions)
+                let items = itemsToAdd.map { suggestion in
                     (
                         name: suggestion,
                         icon: chatVM.determineIcon(for: suggestion),
@@ -289,17 +343,24 @@ struct AIAssistantView: View {
                 )
                 
                 withAnimation {
-                    chatVM.suggestions.removeAll()
+                    for item in itemsToAdd {
+                        chatVM.removeSuggestion(item)
+                    }
+                    selectedSuggestions.removeAll()
                 }
                 
                 let aiMessage = ChatMessage(
-                    text: "✅ Created \"\(trimmed)\" with \(items.count) items!",
+                    text: "Created \"\(trimmed)\" with \(items.count) items!",
                     isUser: false
                 )
                 chatVM.messages.append(aiMessage)
+                
+                let gen = UINotificationFeedbackGenerator()
+                gen.notificationOccurred(.success)
             }
         } message: {
-            Text("All \(chatVM.suggestions.count) suggested items will be added to the new list.")
+            let count = selectedSuggestions.isEmpty ? chatVM.suggestions.count : selectedSuggestions.count
+            Text("\(count) suggested item\(count == 1 ? "" : "s") will be added to the new list.")
         }
     }
     

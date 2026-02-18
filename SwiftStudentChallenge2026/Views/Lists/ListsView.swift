@@ -14,6 +14,8 @@ struct ListsView: View {
     @State private var appearAnimations: Set<UUID> = []
     @State private var searchText = ""
     @State private var showAllTemplates = false
+    @State private var listToDelete: PackingList?
+    @State private var showDeleteConfirmation = false
     
     var body: some View {
         NavigationStack {
@@ -52,6 +54,21 @@ struct ListsView: View {
             }
             .sheet(isPresented: $showNewListSheet) {
                 NewListSheet(viewModel: viewModel)
+            }
+            .alert("Delete List?", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { listToDelete = nil }
+                Button("Delete", role: .destructive) {
+                    if let list = listToDelete {
+                        withAnimation { viewModel.deleteList(list) }
+                        listToDelete = nil
+                    }
+                }
+            } message: {
+                if let list = listToDelete {
+                    Text("\"\(list.name)\" and all its items will be permanently deleted.")
+                } else {
+                    Text("This list will be permanently deleted.")
+                }
             }
         }
     }
@@ -147,7 +164,7 @@ struct ListsView: View {
                 .buttonStyle(.plain)
                 .contextMenu {
                     Button(role: .destructive) {
-                        withAnimation { viewModel.deleteList(list) }
+                        deleteListWithConfirmation(list)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -155,6 +172,11 @@ struct ListsView: View {
             }
         }
         .padding(.horizontal, 20)
+    }
+    
+    private func deleteListWithConfirmation(_ list: PackingList) {
+        listToDelete = list
+        showDeleteConfirmation = true
     }
     
     private var filteredLists: [PackingList] {
@@ -166,19 +188,33 @@ struct ListsView: View {
     
     private var emptyState: some View {
         VStack(spacing: 20) {
-            Image(systemName: "tray")
-                .font(.system(size: 52))
-                .foregroundStyle(
-                    LinearGradient(colors: [.blue.opacity(0.6), .purple.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "#667eea")?.opacity(0.15) ?? .blue.opacity(0.1), Color(hex: "#764ba2")?.opacity(0.1) ?? .purple.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 100, height: 100)
+                
+                Image(systemName: "suitcase")
+                    .font(.system(size: 40))
+                    .foregroundStyle(
+                        LinearGradient(colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+            }
             
-            Text("No Lists Yet")
-                .font(.title3.bold())
-            
-            Text("Create your first list or use a template above!")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                Text("No Lists Yet")
+                    .font(.title3.bold())
+                
+                Text("Create your first packing list\nor use a template above to get started!")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             
             Button {
                 showNewListSheet = true
@@ -186,12 +222,22 @@ struct ListsView: View {
                 Label("Create List", systemImage: "plus")
                     .font(.subheadline.bold())
                     .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Capsule().fill(Color.blue.gradient))
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .shadow(color: Color(hex: "#667eea")?.opacity(0.3) ?? .blue.opacity(0.3), radius: 8, y: 4)
+                    )
             }
         }
-        .padding(.vertical, 40)
+        .padding(.vertical, 50)
     }
     
     private var emptySearchState: some View {

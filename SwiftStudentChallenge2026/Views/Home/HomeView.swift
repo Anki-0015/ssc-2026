@@ -10,8 +10,11 @@ import SwiftUI
 
 struct HomeView: View {
     @ObservedObject var listsViewModel: ListsViewModel
+    @Binding var selectedTab: Int
+    @AppStorage("userName") private var userName = ""
     @State private var animateStats = false
     @State private var selectedTip: Int?
+    @State private var showNewListSheet = false
     
     var body: some View {
         NavigationStack {
@@ -23,6 +26,9 @@ struct HomeView: View {
                     // Stats
                     statsGrid
                     
+                    // Quick Actions
+                    quickActionsSection
+                    
                     // Active Lists
                     if !listsViewModel.customLists.isEmpty {
                         activeListsSection
@@ -30,11 +36,17 @@ struct HomeView: View {
                     
                     // Tips
                     tipsSection
+                    
+                    // Motivational footer
+                    motivationalFooter
                 }
                 .padding(.bottom, 32)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("PocketPrep")
+            .sheet(isPresented: $showNewListSheet) {
+                NewListSheet(viewModel: listsViewModel)
+            }
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.5).delay(0.2)) {
@@ -64,6 +76,67 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.top, 8)
+    }
+    
+    // MARK: - Quick Actions
+    
+    private var quickActionsSection: some View {
+        HStack(spacing: 12) {
+            Button {
+                let gen = UIImpactFeedbackGenerator(style: .medium)
+                gen.impactOccurred()
+                showNewListSheet = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 20))
+                    Text("New List")
+                        .font(.subheadline.bold())
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: Color(hex: "#667eea")?.opacity(0.3) ?? .blue.opacity(0.3), radius: 8, y: 4)
+                )
+            }
+            
+            Button {
+                let gen = UIImpactFeedbackGenerator(style: .medium)
+                gen.impactOccurred()
+                withAnimation { selectedTab = 2 }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 20))
+                    Text("Ask AI")
+                        .font(.subheadline.bold())
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#f093fb") ?? .pink, Color(hex: "#f5576c") ?? .red],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: Color(hex: "#f093fb")?.opacity(0.3) ?? .pink.opacity(0.3), radius: 8, y: 4)
+                )
+            }
+        }
+        .padding(.horizontal, 20)
     }
     
     // MARK: - Stats Grid
@@ -146,11 +219,12 @@ struct HomeView: View {
     
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
+        let name = userName.isEmpty ? "" : ", \(userName.trimmingCharacters(in: .whitespaces).split(separator: " ").first.map(String.init) ?? userName)"
         switch hour {
-        case 5..<12: return "Good Morning ☀️"
-        case 12..<17: return "Good Afternoon 🌤"
-        case 17..<21: return "Good Evening 🌅"
-        default: return "Good Night 🌙"
+        case 5..<12: return "Good Morning\(name) ☀️"
+        case 12..<17: return "Good Afternoon\(name) 🌤"
+        case 17..<21: return "Good Evening\(name) 🌅"
+        default: return "Good Night\(name) 🌙"
         }
     }
     
@@ -178,6 +252,34 @@ struct HomeView: View {
         ("list.clipboard.fill", "Pack Night Before", "Prepare your bag the evening before to avoid morning rush."),
         ("scalemass.fill", "Weigh Your Bag", "Check airline limits to avoid surprise fees at the airport.")
     ]
+    
+    // MARK: - Motivational Footer
+    
+    private var motivationalFooter: some View {
+        VStack(spacing: 8) {
+            Text(motivationalQuote.text)
+                .font(.subheadline.italic())
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Text("— \(motivationalQuote.author)")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary.opacity(0.7))
+        }
+        .padding(.horizontal, 40)
+        .padding(.vertical, 16)
+    }
+    
+    private var motivationalQuote: (text: String, author: String) {
+        let quotes: [(String, String)] = [
+            ("A journey of a thousand miles begins with a single step.", "Lao Tzu"),
+            ("The secret of getting ahead is getting started.", "Mark Twain"),
+            ("Adventure is worthwhile in itself.", "Amelia Earhart"),
+            ("Not all those who wander are lost.", "J.R.R. Tolkien")
+        ]
+        let day = Calendar.current.component(.day, from: Date())
+        return quotes[day % quotes.count]
+    }
 }
 
 // MARK: - Stat Card

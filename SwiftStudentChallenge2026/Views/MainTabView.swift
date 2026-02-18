@@ -22,7 +22,7 @@ struct MainTabView: View {
                     .transition(.opacity)
             } else {
                 TabView(selection: $selectedTab) {
-                    HomeView(listsViewModel: listsViewModel)
+                    HomeView(listsViewModel: listsViewModel, selectedTab: $selectedTab)
                         .tabItem {
                             Label("Home", systemImage: "house.fill")
                         }
@@ -40,7 +40,14 @@ struct MainTabView: View {
                             Label("AI Assistant", systemImage: "sparkles")
                         }
                         .tag(2)
+                    
+                    SettingsView(listsViewModel: listsViewModel)
+                        .tabItem {
+                            Label("Settings", systemImage: "gearshape.fill")
+                        }
+                        .tag(3)
                 }
+                .tint(Color(hex: "#764ba2") ?? .purple)
                 .transition(.opacity)
             }
         }

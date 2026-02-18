@@ -16,6 +16,8 @@ struct ListDetailView: View {
     @State private var previousProgress: Double = 0
     @State private var editingItem: PrepItem?
     @State private var animatedProgress: Double = 0
+    @State private var sortByName = false
+    @State private var showResetConfirmation = false
     
     var body: some View {
         ZStack {
@@ -42,14 +44,40 @@ struct ListDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    let gen = UIImpactFeedbackGenerator(style: .medium)
-                    gen.impactOccurred()
-                    showAddItem = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .symbolRenderingMode(.hierarchical)
+                HStack(spacing: 4) {
+                    ShareLink(item: shareableText, subject: Text(list.name)) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.subheadline)
+                    }
+                    
+                    Button {
+                        let gen = UIImpactFeedbackGenerator(style: .medium)
+                        gen.impactOccurred()
+                        showAddItem = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                    
+                    Menu {
+                        Button {
+                            withAnimation { sortByName.toggle() }
+                        } label: {
+                            Label(sortByName ? "Sort by Category" : "Sort by Name", systemImage: sortByName ? "folder" : "textformat.abc")
+                        }
+                        
+                        Divider()
+                        
+                        Button(role: .destructive) {
+                            showResetConfirmation = true
+                        } label: {
+                            Label("Reset All Items", systemImage: "arrow.counterclockwise")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.subheadline)
+                    }
                 }
             }
         }
@@ -58,6 +86,16 @@ struct ListDetailView: View {
         }
         .sheet(item: $editingItem) { item in
             EditItemSheet(viewModel: viewModel, item: item)
+        }
+        .alert("Reset All Items?", isPresented: $showResetConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset", role: .destructive) {
+                viewModel.resetList(list)
+                let gen = UINotificationFeedbackGenerator()
+                gen.notificationOccurred(.success)
+            }
+        } message: {
+            Text("This will mark all items as unpacked.")
         }
         .onAppear {
             previousProgress = list.progress
@@ -154,6 +192,37 @@ struct ListDetailView: View {
         return VStack(spacing: 16) {
             if list.items.isEmpty {
                 emptyState
+            } else if sortByName {
+                let sortedItems = list.items.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                VStack(spacing: 0) {
+                    ForEach(sortedItems) { item in
+                        ItemRow(
+                            item: item,
+                            categoryColor: ItemCategory.allCases.first(where: { $0.rawValue == item.category })?.color ?? .gray,
+                            onToggle: { item in
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    viewModel.toggleItem(item)
+                                }
+                            },
+                            onEdit: { item in
+                                editingItem = item
+                            },
+                            onDelete: { item in
+                                withAnimation {
+                                    viewModel.deleteItem(item, from: list)
+                                }
+                            }
+                        )
+                        
+                        if item.id != sortedItems.last?.id {
+                            Divider().padding(.leading, 60)
+                        }
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                )
             } else {
                 ForEach(sortedKeys, id: \.self) { category in
                     if let items = grouped[category] {
@@ -225,6 +294,25 @@ struct ListDetailView: View {
         if animatedProgress >= 0.5 { return "Halfway" }
         if animatedProgress > 0 { return "Packing..." }
         return "Start!"
+    }
+    
+    private var shareableText: String {
+        var text = "\(list.name)\n"
+        text += String(repeating: "-", count: 30) + "\n\n"
+        
+        let grouped = Dictionary(grouping: list.items) { $0.category }
+        for key in grouped.keys.sorted() {
+            text += "\(key)\n"
+            for item in grouped[key] ?? [] {
+                let mark = item.isPacked ? "[x]" : "[ ]"
+                text += "  \(mark) \(item.name)\n"
+            }
+            text += "\n"
+        }
+        
+        text += "\(list.packedCount)/\(list.totalCount) packed | \(Int(list.progress * 100))% complete\n"
+        text += "Shared from PocketPrep"
+        return text
     }
 }
 
@@ -340,31 +428,48 @@ struct ItemRow: View {
                 .foregroundColor(item.isPacked ? .secondary : categoryColor)
                 .frame(width: 24)
             
-            // Name
-            Text(item.name)
-                .font(.body)
-                .foregroundColor(item.isPacked ? .secondary : .primary)
-                .strikethrough(item.isPacked, color: .secondary)
+            // Name & Notes
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.body)
+                    .foregroundColor(item.isPacked ? .secondary : .primary)
+                    .strikethrough(item.isPacked, color: .secondary)
+                
+                if let notes = item.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
             
             Spacer()
-            
-            // Edit button
-            Button { onEdit(item) } label: {
-                Image(systemName: "pencil")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary.opacity(0.6))
-            }
-            
-            // Delete button
-            Button { onDelete(item) } label: {
-                Image(systemName: "trash")
-                    .font(.system(size: 13))
-                    .foregroundColor(.red.opacity(0.5))
-            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                onDelete(item)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            
+            Button {
+                onEdit(item)
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+            .tint(.orange)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                onToggle(item)
+            } label: {
+                Label(item.isPacked ? "Unpack" : "Pack", systemImage: item.isPacked ? "xmark.circle" : "checkmark.circle")
+            }
+            .tint(item.isPacked ? .orange : .green)
+        }
         .contextMenu {
             Button { onToggle(item) } label: {
                 Label(item.isPacked ? "Unpack" : "Pack", systemImage: item.isPacked ? "xmark.circle" : "checkmark.circle")
