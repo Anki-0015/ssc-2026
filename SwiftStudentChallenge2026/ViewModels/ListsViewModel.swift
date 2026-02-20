@@ -240,11 +240,11 @@ class ListsViewModel: ObservableObject {
     
     // Stats
     var totalItems: Int {
-        lists.flatMap(\.items).count
+        customLists.flatMap(\.items).count
     }
     
     var totalPackedItems: Int {
-        lists.flatMap(\.items).filter(\.isPacked).count
+        customLists.flatMap(\.items).filter(\.isPacked).count
     }
     
     var totalUnpackedItems: Int {

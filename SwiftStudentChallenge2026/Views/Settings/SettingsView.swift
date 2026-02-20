@@ -65,7 +65,7 @@ struct SettingsView: View {
                 
                 // Stats Section
                 Section("Your Stats") {
-                    StatRow(icon: "checklist", color: .blue, label: "Total Lists", value: "\(listsViewModel.lists.count)")
+                    StatRow(icon: "checklist", color: .blue, label: "Total Lists", value: "\(listsViewModel.customLists.count)")
                     StatRow(icon: "checkmark.circle.fill", color: .green, label: "Items Packed", value: "\(listsViewModel.totalPackedItems)")
                     StatRow(icon: "chart.line.uptrend.xyaxis", color: .purple, label: "Completion", value: "\(listsViewModel.overallCompletionPercentage)%")
                     StatRow(icon: "tray.full.fill", color: .orange, label: "Total Items", value: "\(listsViewModel.totalItems)")

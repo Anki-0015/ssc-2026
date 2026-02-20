@@ -8,6 +8,11 @@
 
 import SwiftUI
 
+enum ListFilter: String, CaseIterable {
+    case ongoing = "Ongoing"
+    case past = "Past"
+}
+
 struct ListsView: View {
     @ObservedObject var viewModel: ListsViewModel
     @State private var showNewListSheet = false
@@ -16,6 +21,7 @@ struct ListsView: View {
     @State private var showAllTemplates = false
     @State private var listToDelete: PackingList?
     @State private var showDeleteConfirmation = false
+    @State private var listFilter: ListFilter = .ongoing
     
     var body: some View {
         NavigationStack {
@@ -30,6 +36,11 @@ struct ListsView: View {
                     // Templates
                     if searchText.isEmpty {
                         templatesSection
+                    }
+                    
+                    // Filter Picker
+                    if !viewModel.customLists.isEmpty {
+                        listFilterPicker
                     }
                     
                     // Custom Lists
@@ -71,6 +82,63 @@ struct ListsView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - List Filter Picker
+    
+    private var listFilterPicker: some View {
+        HStack(spacing: 0) {
+            ForEach(ListFilter.allCases, id: \.self) { filter in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        listFilter = filter
+                        appearAnimations.removeAll()
+                    }
+                } label: {
+                    VStack(spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: filter == .ongoing ? "tray.full.fill" : "checkmark.seal.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                            
+                            Text(filter.rawValue)
+                                .font(.subheadline.bold())
+                            
+                            let count = filter == .ongoing ? ongoingLists.count : pastLists.count
+                            if count > 0 {
+                                Text("\(count)")
+                                    .font(.caption2.bold())
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        Capsule().fill(
+                                            listFilter == filter
+                                            ? (filter == .ongoing ? Color.blue : Color.green).gradient
+                                            : Color.gray.gradient
+                                        )
+                                    )
+                            }
+                        }
+                        .foregroundColor(listFilter == filter ? .primary : .secondary)
+                        
+                        // Active indicator bar
+                        Capsule()
+                            .fill(
+                                listFilter == filter
+                                ? LinearGradient(
+                                    colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                                : LinearGradient(colors: [Color.clear], startPoint: .leading, endPoint: .trailing)
+                            )
+                            .frame(height: 3)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .padding(.horizontal, 20)
     }
     
     // MARK: - Templates
@@ -117,31 +185,24 @@ struct ListsView: View {
         }
     }
     
+    // MARK: - Computed List Filters
+    
+    private var ongoingLists: [PackingList] {
+        viewModel.customLists.filter { $0.progress < 1.0 }
+    }
+    
+    private var pastLists: [PackingList] {
+        viewModel.customLists.filter { $0.progress >= 1.0 }
+    }
+    
     // MARK: - Custom Lists
     
     private var customListsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if !viewModel.customLists.isEmpty {
-                HStack {
-                    Text("My Lists")
-                        .font(.title3.bold())
-                    
-                    Spacer()
-                    
-                    Text("\(viewModel.customLists.count)")
-                        .font(.caption.bold())
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.blue.gradient))
-                }
-                .padding(.horizontal, 20)
-            }
-            
             if filteredLists.isEmpty && !searchText.isEmpty {
                 emptySearchState
             } else if filteredLists.isEmpty {
-                emptyState
+                emptyFilterState
             } else {
                 customListRows
             }
@@ -180,64 +241,61 @@ struct ListsView: View {
     }
     
     private var filteredLists: [PackingList] {
-        if searchText.isEmpty { return viewModel.customLists }
-        return viewModel.customLists.filter {
+        let base: [PackingList]
+        switch listFilter {
+        case .ongoing:
+            base = ongoingLists
+        case .past:
+            base = pastLists
+        }
+        
+        if searchText.isEmpty { return base }
+        return base.filter {
             $0.name.localizedCaseInsensitiveContains(searchText)
         }
     }
     
-    private var emptyState: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(hex: "#667eea")?.opacity(0.15) ?? .blue.opacity(0.1), Color(hex: "#764ba2")?.opacity(0.1) ?? .purple.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 100, height: 100)
-                
-                Image(systemName: "suitcase")
-                    .font(.system(size: 40))
-                    .foregroundStyle(
-                        LinearGradient(colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
-            }
+    private var emptyFilterState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: listFilter == .ongoing ? "tray" : "checkmark.seal")
+                .font(.system(size: 36))
+                .foregroundColor(.secondary.opacity(0.5))
             
-            VStack(spacing: 8) {
-                Text("No Lists Yet")
-                    .font(.title3.bold())
-                
-                Text("Create your first packing list\nor use a template above to get started!")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
+            Text(listFilter == .ongoing ? "No ongoing lists" : "No completed lists")
+                .font(.subheadline.bold())
+                .foregroundColor(.secondary)
             
-            Button {
-                showNewListSheet = true
-            } label: {
-                Label("Create List", systemImage: "plus")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 14)
-                    .background(
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+            Text(listFilter == .ongoing
+                 ? "Create a new list or use a template above"
+                 : "Complete a list to see it here")
+                .font(.caption)
+                .foregroundColor(.secondary.opacity(0.7))
+                .multilineTextAlignment(.center)
+            
+            if listFilter == .ongoing {
+                Button {
+                    showNewListSheet = true
+                } label: {
+                    Label("Create List", systemImage: "plus")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 14)
+                        .background(
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
                                 )
-                            )
-                            .shadow(color: Color(hex: "#667eea")?.opacity(0.3) ?? .blue.opacity(0.3), radius: 8, y: 4)
-                    )
+                                .shadow(color: Color(hex: "#667eea")?.opacity(0.3) ?? .blue.opacity(0.3), radius: 8, y: 4)
+                        )
+                }
             }
         }
-        .padding(.vertical, 50)
+        .padding(.vertical, 40)
     }
     
     private var emptySearchState: some View {

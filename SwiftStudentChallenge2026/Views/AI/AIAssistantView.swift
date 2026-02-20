@@ -409,10 +409,6 @@ struct AIAssistantView: View {
                                         } else {
                                             selectedSuggestions.insert(item)
                                         }
-                                    },
-                                    onAdd: {
-                                        pendingSuggestion = item
-                                        showListPicker = true
                                     }
                                 )
                                 .transition(.asymmetric(
@@ -591,7 +587,6 @@ struct SuggestionItemRow: View {
     let accentColor: Color
     let isSelected: Bool
     let onToggle: () -> Void
-    let onAdd: () -> Void
     
     var body: some View {
         HStack(spacing: 10) {
@@ -623,15 +618,6 @@ struct SuggestionItemRow: View {
                 .foregroundColor(.primary)
             
             Spacer()
-            
-            Button(action: onAdd) {
-                Text("Add")
-                    .font(.caption2.bold())
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(accentColor.gradient))
-            }
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 4)

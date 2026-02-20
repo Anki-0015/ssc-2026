@@ -31,11 +31,8 @@ struct HomeView: View {
                     // Header
                     headerSection
                     
-                    // Quick Actions
-                    quickActionsRow
-                    
-                    // Past Lists (replaces welcome card)
-                    pastListsSection
+                    // Ongoing Lists
+                    ongoingListsSection
                     
                     if !listsViewModel.customLists.isEmpty {
                         // Progress Hero Card
@@ -45,15 +42,7 @@ struct HomeView: View {
                     // Templates
                     templatesCarousel
                     
-                    // Active Lists
-                    if !activeLists.isEmpty {
-                        activeListsSection
-                    }
-                    
-                    // Completed Lists
-                    if !completedLists.isEmpty {
-                        completedListsSection
-                    }
+
                     
                     // Tips (only when few lists)
                     if listsViewModel.customLists.count < 3 {
@@ -101,55 +90,28 @@ struct HomeView: View {
         .padding(.top, 8)
     }
     
-    // MARK: - Quick Actions
+
     
-    private var quickActionsRow: some View {
-        HStack(spacing: 10) {
-            QuickActionButton(
-                icon: "plus.circle.fill",
-                label: "New List",
-                colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple]
-            ) {
-                showNewListSheet = true
-            }
-            
-            QuickActionButton(
-                icon: "sparkles",
-                label: "Ask AI",
-                colors: [Color(hex: "#f093fb") ?? .pink, Color(hex: "#f5576c") ?? .red]
-            ) {
-                withAnimation { selectedTab = 2 }
-            }
-            
-            QuickActionButton(
-                icon: "checklist",
-                label: "My Lists",
-                colors: [Color(hex: "#43e97b") ?? .green, Color(hex: "#38f9d7") ?? .mint]
-            ) {
-                withAnimation { selectedTab = 1 }
-            }
-        }
-        .padding(.horizontal, 20)
+    // MARK: - Ongoing Lists
+    
+    private var ongoingLists: [PackingList] {
+        listsViewModel.customLists
+            .filter { $0.progress < 1.0 }
+            .sorted { $0.createdAt > $1.createdAt }
     }
     
-    // MARK: - Past Lists
-    
-    private var recentLists: [PackingList] {
-        listsViewModel.customLists.sorted { $0.createdAt > $1.createdAt }
-    }
-    
-    private var pastListsSection: some View {
+    private var ongoingListsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "clock.arrow.circlepath")
+                Image(systemName: "tray.full.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Color(hex: "#667eea") ?? .blue)
                 
-                Text("Past Lists")
+                Text("Ongoing Lists")
                     .font(.subheadline.bold())
                 
-                if !recentLists.isEmpty {
-                    Text("\(recentLists.count)")
+                if !ongoingLists.isEmpty {
+                    Text("\(ongoingLists.count)")
                         .font(.caption2.bold())
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
@@ -159,9 +121,9 @@ struct HomeView: View {
                 
                 Spacer()
                 
-                if recentLists.count > 3 {
-                    NavigationLink {
-                        AllPastListsView(lists: recentLists, viewModel: listsViewModel)
+                if ongoingLists.count > 3 {
+                    Button {
+                        withAnimation { selectedTab = 1 }
                     } label: {
                         Text("See All")
                             .font(.caption.bold())
@@ -171,18 +133,18 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
             
-            if recentLists.isEmpty {
+            if ongoingLists.isEmpty {
                 // Compact empty state
                 HStack(spacing: 12) {
-                    Image(systemName: "tray")
+                    Image(systemName: "checkmark.circle")
                         .font(.system(size: 24))
                         .foregroundColor(.secondary.opacity(0.5))
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("No lists yet")
+                        Text("No ongoing lists")
                             .font(.subheadline.bold())
                             .foregroundColor(.secondary)
-                        Text("Create a list or use a template below")
+                        Text("All caught up! Create a new list below")
                             .font(.caption)
                             .foregroundColor(.secondary.opacity(0.7))
                     }
@@ -197,7 +159,7 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
             } else {
                 VStack(spacing: 8) {
-                    ForEach(recentLists.prefix(3)) { list in
+                    ForEach(ongoingLists.prefix(3)) { list in
                         NavigationLink(destination: ListDetailView(list: list, viewModel: listsViewModel)) {
                             PastListRow(list: list)
                         }
@@ -285,7 +247,7 @@ struct HomeView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(listsViewModel.templates) { template in
+                    ForEach(listsViewModel.templates.prefix(3)) { template in
                         TemplateChip(template: template) {
                             listsViewModel.duplicateTemplate(template)
                             let gen = UINotificationFeedbackGenerator()
@@ -506,43 +468,7 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Quick Action Button
 
-struct QuickActionButton: View {
-    let icon: String
-    let label: String
-    let colors: [Color]
-    let action: () -> Void
-    
-    var body: some View {
-        Button {
-            let gen = UIImpactFeedbackGenerator(style: .medium)
-            gen.impactOccurred()
-            action()
-        } label: {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                Text(label)
-                    .font(.caption.bold())
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: colors,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: colors.first?.opacity(0.3) ?? .clear, radius: 8, y: 4)
-            )
-        }
-    }
-}
 
 // MARK: - Mini Stat
 

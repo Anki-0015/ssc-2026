@@ -45,10 +45,6 @@ struct ListDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 4) {
-                    ShareLink(item: shareableText, subject: Text(list.name)) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.subheadline)
-                    }
                     
                     Button {
                         let gen = UIImpactFeedbackGenerator(style: .medium)
@@ -296,356 +292,338 @@ struct ListDetailView: View {
         return "Start!"
     }
     
-    private var shareableText: String {
-        var text = "\(list.name)\n"
-        text += String(repeating: "-", count: 30) + "\n\n"
+    
+    // MARK: - Category Section
+    
+    struct CategorySection: View {
+        let category: String
+        let items: [PrepItem]
+        let onToggle: (PrepItem) -> Void
+        let onEdit: (PrepItem) -> Void
+        let onDelete: (PrepItem) -> Void
         
-        let grouped = Dictionary(grouping: list.items) { $0.category }
-        for key in grouped.keys.sorted() {
-            text += "\(key)\n"
-            for item in grouped[key] ?? [] {
-                let mark = item.isPacked ? "[x]" : "[ ]"
-                text += "  \(mark) \(item.name)\n"
-            }
-            text += "\n"
+        @State private var isExpanded = true
+        
+        var packedCount: Int { items.filter(\.isPacked).count }
+        
+        var categoryColor: Color {
+            ItemCategory.allCases.first(where: { $0.rawValue == category })?.color ?? .gray
         }
         
-        text += "\(list.packedCount)/\(list.totalCount) packed | \(Int(list.progress * 100))% complete\n"
-        text += "Shared from PocketPrep"
-        return text
-    }
-}
-
-// MARK: - Category Section
-
-struct CategorySection: View {
-    let category: String
-    let items: [PrepItem]
-    let onToggle: (PrepItem) -> Void
-    let onEdit: (PrepItem) -> Void
-    let onDelete: (PrepItem) -> Void
-    
-    @State private var isExpanded = true
-    
-    var packedCount: Int { items.filter(\.isPacked).count }
-    
-    var categoryColor: Color {
-        ItemCategory.allCases.first(where: { $0.rawValue == category })?.color ?? .gray
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            Button {
-                withAnimation(.easeOut(duration: 0.3)) { isExpanded.toggle() }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: ItemCategory.allCases.first(where: { $0.rawValue == category })?.icon ?? "tag")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(categoryColor)
-                    
-                    Text(category)
-                        .font(.subheadline.bold())
-                        .foregroundColor(.primary)
-                    
-                    Text("\(packedCount)/\(items.count)")
-                        .font(.caption2.bold())
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(categoryColor.gradient))
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.caption.bold())
-                        .foregroundColor(.secondary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .padding(14)
-            }
-            
-            if isExpanded {
-                Divider().padding(.horizontal, 14)
-                
-                ForEach(items) { item in
-                    ItemRow(
-                        item: item,
-                        categoryColor: categoryColor,
-                        onToggle: onToggle,
-                        onEdit: onEdit,
-                        onDelete: onDelete
-                    )
-                    
-                    if item.id != items.last?.id {
-                        Divider().padding(.leading, 60)
-                    }
-                }
-            }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-    }
-}
-
-// MARK: - Item Row
-
-struct ItemRow: View {
-    let item: PrepItem
-    let categoryColor: Color
-    let onToggle: (PrepItem) -> Void
-    let onEdit: (PrepItem) -> Void
-    let onDelete: (PrepItem) -> Void
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Checkbox
-            Button {
-                let gen = UIImpactFeedbackGenerator(style: .light)
-                gen.impactOccurred()
-                onToggle(item)
-            } label: {
-                ZStack {
-                    Circle()
-                        .strokeBorder(item.isPacked ? Color.clear : Color.gray.opacity(0.3), lineWidth: 2)
-                        .background(Circle().fill(item.isPacked ? categoryColor : Color.clear))
-                        .frame(width: 26, height: 26)
-                    
-                    if item.isPacked {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .bold))
+        var body: some View {
+            VStack(spacing: 0) {
+                // Header
+                Button {
+                    withAnimation(.easeOut(duration: 0.3)) { isExpanded.toggle() }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: ItemCategory.allCases.first(where: { $0.rawValue == category })?.icon ?? "tag")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(categoryColor)
+                        
+                        Text(category)
+                            .font(.subheadline.bold())
+                            .foregroundColor(.primary)
+                        
+                        Text("\(packedCount)/\(items.count)")
+                            .font(.caption2.bold())
                             .foregroundColor(.white)
-                            .transition(.scale.combined(with: .opacity))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(categoryColor.gradient))
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                            .foregroundColor(.secondary)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    }
+                    .padding(14)
+                }
+                
+                if isExpanded {
+                    Divider().padding(.horizontal, 14)
+                    
+                    ForEach(items) { item in
+                        ItemRow(
+                            item: item,
+                            categoryColor: categoryColor,
+                            onToggle: onToggle,
+                            onEdit: onEdit,
+                            onDelete: onDelete
+                        )
+                        
+                        if item.id != items.last?.id {
+                            Divider().padding(.leading, 60)
+                        }
                     }
                 }
             }
-            
-            // Icon
-            Image(systemName: item.icon)
-                .font(.system(size: 16))
-                .foregroundColor(item.isPacked ? .secondary : categoryColor)
-                .frame(width: 24)
-            
-            // Name & Notes
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.name)
-                    .font(.body)
-                    .foregroundColor(item.isPacked ? .secondary : .primary)
-                    .strikethrough(item.isPacked, color: .secondary)
-                
-                if let notes = item.notes, !notes.isEmpty {
-                    Text(notes)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .contentShape(Rectangle())
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                onDelete(item)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-            
-            Button {
-                onEdit(item)
-            } label: {
-                Label("Edit", systemImage: "pencil")
-            }
-            .tint(.orange)
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                onToggle(item)
-            } label: {
-                Label(item.isPacked ? "Unpack" : "Pack", systemImage: item.isPacked ? "xmark.circle" : "checkmark.circle")
-            }
-            .tint(item.isPacked ? .orange : .green)
-        }
-        .contextMenu {
-            Button { onToggle(item) } label: {
-                Label(item.isPacked ? "Unpack" : "Pack", systemImage: item.isPacked ? "xmark.circle" : "checkmark.circle")
-            }
-            Button { onEdit(item) } label: {
-                Label("Edit", systemImage: "pencil")
-            }
-            Divider()
-            Button(role: .destructive) { onDelete(item) } label: {
-                Label("Delete", systemImage: "trash")
-            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
         }
     }
-}
-
-// MARK: - Add Item Sheet
-
-struct AddItemSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @ObservedObject var viewModel: ListsViewModel
-    let list: PackingList
     
-    @State private var name = ""
-    @State private var icon = "checkmark.circle"
-    @State private var category = "Other"
+    // MARK: - Item Row
     
-    let icons = [
-        "checkmark.circle", "bag", "book.closed", "laptopcomputer",
-        "iphone", "headphones", "waterbottle", "creditcard",
-        "key", "shoe.2", "backpack", "tshirt",
-        "doc.text", "drop", "fork.knife", "cross.case", "camera",
-        "umbrella", "sunglasses", "cable.connector"
-    ]
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Item") {
-                    TextField("Item name", text: $name)
-                }
-                
-                Section("Category") {
-                    Picker("Category", selection: $category) {
-                        ForEach(ItemCategory.allCases) { cat in
-                            Text(cat.rawValue).tag(cat.rawValue)
+    struct ItemRow: View {
+        let item: PrepItem
+        let categoryColor: Color
+        let onToggle: (PrepItem) -> Void
+        let onEdit: (PrepItem) -> Void
+        let onDelete: (PrepItem) -> Void
+        
+        var body: some View {
+            HStack(spacing: 12) {
+                // Checkbox
+                Button {
+                    let gen = UIImpactFeedbackGenerator(style: .light)
+                    gen.impactOccurred()
+                    onToggle(item)
+                } label: {
+                    ZStack {
+                        Circle()
+                            .strokeBorder(item.isPacked ? Color.clear : Color.gray.opacity(0.3), lineWidth: 2)
+                            .background(Circle().fill(item.isPacked ? categoryColor : Color.clear))
+                            .frame(width: 26, height: 26)
+                        
+                        if item.isPacked {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                                .transition(.scale.combined(with: .opacity))
                         }
                     }
                 }
                 
-                Section("Icon") {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 50))], spacing: 10) {
-                        ForEach(icons, id: \.self) { ic in
-                            Button {
-                                icon = ic
-                                let gen = UISelectionFeedbackGenerator()
-                                gen.selectionChanged()
-                            } label: {
-                                Image(systemName: ic)
-                                    .font(.system(size: 22))
-                                    .foregroundColor(icon == ic ? .white : .primary)
-                                    .frame(width: 48, height: 48)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(icon == ic ? Color.accentColor : Color(.systemGray6))
-                                    )
+                // Icon
+                Image(systemName: item.icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(item.isPacked ? .secondary : categoryColor)
+                    .frame(width: 24)
+                
+                // Name & Notes
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.name)
+                        .font(.body)
+                        .foregroundColor(item.isPacked ? .secondary : .primary)
+                        .strikethrough(item.isPacked, color: .secondary)
+                    
+                    if let notes = item.notes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    onDelete(item)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                
+                Button {
+                    onEdit(item)
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.orange)
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                    onToggle(item)
+                } label: {
+                    Label(item.isPacked ? "Unpack" : "Pack", systemImage: item.isPacked ? "xmark.circle" : "checkmark.circle")
+                }
+                .tint(item.isPacked ? .orange : .green)
+            }
+            .contextMenu {
+                Button { onToggle(item) } label: {
+                    Label(item.isPacked ? "Unpack" : "Pack", systemImage: item.isPacked ? "xmark.circle" : "checkmark.circle")
+                }
+                Button { onEdit(item) } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                Divider()
+                Button(role: .destructive) { onDelete(item) } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+    }
+    
+    // MARK: - Add Item Sheet
+    
+    struct AddItemSheet: View {
+        @Environment(\.dismiss) private var dismiss
+        @ObservedObject var viewModel: ListsViewModel
+        let list: PackingList
+        
+        @State private var name = ""
+        @State private var icon = "checkmark.circle"
+        @State private var category = "Other"
+        
+        let icons = [
+            "checkmark.circle", "bag", "book.closed", "laptopcomputer",
+            "iphone", "headphones", "waterbottle", "creditcard",
+            "key", "shoe.2", "backpack", "tshirt",
+            "doc.text", "drop", "fork.knife", "cross.case", "camera",
+            "umbrella", "sunglasses", "cable.connector"
+        ]
+        
+        var body: some View {
+            NavigationStack {
+                Form {
+                    Section("Item") {
+                        TextField("Item name", text: $name)
+                    }
+                    
+                    Section("Category") {
+                        Picker("Category", selection: $category) {
+                            ForEach(ItemCategory.allCases) { cat in
+                                Text(cat.rawValue).tag(cat.rawValue)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
-                    .padding(.vertical, 4)
-                }
-            }
-            .navigationTitle("Add Item")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        viewModel.addItem(to: list, name: name, icon: icon, category: category)
-                        dismiss()
+                    
+                    Section("Icon") {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 50))], spacing: 10) {
+                            ForEach(icons, id: \.self) { ic in
+                                Button {
+                                    icon = ic
+                                    let gen = UISelectionFeedbackGenerator()
+                                    gen.selectionChanged()
+                                } label: {
+                                    Image(systemName: ic)
+                                        .font(.system(size: 22))
+                                        .foregroundColor(icon == ic ? .white : .primary)
+                                        .frame(width: 48, height: 48)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(icon == ic ? Color.accentColor : Color(.systemGray6))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .bold()
+                }
+                .navigationTitle("Add Item")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Add") {
+                            viewModel.addItem(to: list, name: name, icon: icon, category: category)
+                            dismiss()
+                        }
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .bold()
+                    }
                 }
             }
         }
     }
-}
-
-// MARK: - Edit Item Sheet
-
-struct EditItemSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @ObservedObject var viewModel: ListsViewModel
-    let item: PrepItem
     
-    @State private var name: String
-    @State private var icon: String
-    @State private var notes: String
-    @State private var category: String
+    // MARK: - Edit Item Sheet
     
-    init(viewModel: ListsViewModel, item: PrepItem) {
-        self.viewModel = viewModel
-        self.item = item
-        _name = State(initialValue: item.name)
-        _icon = State(initialValue: item.icon)
-        _notes = State(initialValue: item.notes ?? "")
-        _category = State(initialValue: item.category)
-    }
-    
-    let icons = [
-        "checkmark.circle", "bag", "book.closed", "laptopcomputer",
-        "iphone", "headphones", "waterbottle", "creditcard",
-        "key", "shoe.2", "backpack", "tshirt",
-        "doc.text", "drop", "fork.knife", "cross.case", "camera",
-        "umbrella", "sunglasses", "cable.connector"
-    ]
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Item") {
-                    TextField("Item name", text: $name)
-                }
-                
-                Section("Notes") {
-                    TextEditor(text: $notes)
-                        .frame(height: 80)
-                }
-                
-                Section("Category") {
-                    Picker("Category", selection: $category) {
-                        ForEach(ItemCategory.allCases) { cat in
-                            Text(cat.rawValue).tag(cat.rawValue)
-                        }
+    struct EditItemSheet: View {
+        @Environment(\.dismiss) private var dismiss
+        @ObservedObject var viewModel: ListsViewModel
+        let item: PrepItem
+        
+        @State private var name: String
+        @State private var icon: String
+        @State private var notes: String
+        @State private var category: String
+        
+        init(viewModel: ListsViewModel, item: PrepItem) {
+            self.viewModel = viewModel
+            self.item = item
+            _name = State(initialValue: item.name)
+            _icon = State(initialValue: item.icon)
+            _notes = State(initialValue: item.notes ?? "")
+            _category = State(initialValue: item.category)
+        }
+        
+        let icons = [
+            "checkmark.circle", "bag", "book.closed", "laptopcomputer",
+            "iphone", "headphones", "waterbottle", "creditcard",
+            "key", "shoe.2", "backpack", "tshirt",
+            "doc.text", "drop", "fork.knife", "cross.case", "camera",
+            "umbrella", "sunglasses", "cable.connector"
+        ]
+        
+        var body: some View {
+            NavigationStack {
+                Form {
+                    Section("Item") {
+                        TextField("Item name", text: $name)
                     }
-                }
-                
-                Section("Icon") {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 50))], spacing: 10) {
-                        ForEach(icons, id: \.self) { ic in
-                            Button {
-                                icon = ic
-                                let gen = UISelectionFeedbackGenerator()
-                                gen.selectionChanged()
-                            } label: {
-                                Image(systemName: ic)
-                                    .font(.system(size: 22))
-                                    .foregroundColor(icon == ic ? .white : .primary)
-                                    .frame(width: 48, height: 48)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(icon == ic ? Color.accentColor : Color(.systemGray6))
-                                    )
+                    
+                    Section("Notes") {
+                        TextEditor(text: $notes)
+                            .frame(height: 80)
+                    }
+                    
+                    Section("Category") {
+                        Picker("Category", selection: $category) {
+                            ForEach(ItemCategory.allCases) { cat in
+                                Text(cat.rawValue).tag(cat.rawValue)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
-                    .padding(.vertical, 4)
-                }
-            }
-            .navigationTitle("Edit Item")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        viewModel.updateItem(item, name: name, icon: icon, notes: notes.isEmpty ? nil : notes, category: category)
-                        dismiss()
+                    
+                    Section("Icon") {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 50))], spacing: 10) {
+                            ForEach(icons, id: \.self) { ic in
+                                Button {
+                                    icon = ic
+                                    let gen = UISelectionFeedbackGenerator()
+                                    gen.selectionChanged()
+                                } label: {
+                                    Image(systemName: ic)
+                                        .font(.system(size: 22))
+                                        .foregroundColor(icon == ic ? .white : .primary)
+                                        .frame(width: 48, height: 48)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(icon == ic ? Color.accentColor : Color(.systemGray6))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical, 4)
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .bold()
+                }
+                .navigationTitle("Edit Item")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            viewModel.updateItem(item, name: name, icon: icon, notes: notes.isEmpty ? nil : notes, category: category)
+                            dismiss()
+                        }
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .bold()
+                    }
                 }
             }
         }
