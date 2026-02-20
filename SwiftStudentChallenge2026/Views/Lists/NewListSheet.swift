@@ -13,15 +13,16 @@ struct NewListSheet: View {
     @ObservedObject var viewModel: ListsViewModel
     
     @State private var name = ""
-    @State private var selectedIcon = "bag"
+    @State private var selectedIcon = "bag.fill"
     @State private var selectedColor = Color.blue
     
     let icons = [
-        "bag", "suitcase", "backpack", "airplane",
-        "book", "dumbbell", "tent.2", "beach.umbrella",
-        "figure.hiking", "briefcase", "graduationcap", "camera",
-        "fork.knife", "music.note", "gamecontroller", "theatermasks",
-        "cart", "gift", "heart", "star"
+        "bag.fill", "suitcase.fill", "airplane", "car.fill",
+        "book.fill", "dumbbell.fill", "tent.2.fill", "sun.max.fill",
+        "figure.walk", "briefcase.fill", "graduationcap.fill", "camera.fill",
+        "fork.knife", "music.note", "gamecontroller.fill", "theatermasks.fill",
+        "cart.fill", "gift.fill", "heart.fill", "star.fill",
+        "house.fill", "leaf.fill", "snowflake", "mountain.2.fill"
     ]
     
     let colors: [Color] = [
@@ -46,7 +47,7 @@ struct NewListSheet: View {
                                 gen.selectionChanged()
                             } label: {
                                 Image(systemName: icon)
-                                    .font(.system(size: 24))
+                                    .font(.system(size: 22))
                                     .foregroundColor(selectedIcon == icon ? .white : .primary)
                                     .frame(width: 52, height: 52)
                                     .background(
@@ -54,8 +55,10 @@ struct NewListSheet: View {
                                             .fill(selectedIcon == icon ? selectedColor : Color(.systemGray6))
                                     )
                             }
+                            .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 4)
                 }
                 
                 Section("Color") {
@@ -82,6 +85,7 @@ struct NewListSheet: View {
                                     }
                                 }
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }

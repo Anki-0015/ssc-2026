@@ -514,7 +514,7 @@ struct AddItemSheet: View {
                 Section("Category") {
                     Picker("Category", selection: $category) {
                         ForEach(ItemCategory.allCases) { cat in
-                            Label(cat.rawValue, systemImage: cat.icon).tag(cat.rawValue)
+                            Text(cat.rawValue).tag(cat.rawValue)
                         }
                     }
                 }
@@ -536,8 +536,10 @@ struct AddItemSheet: View {
                                             .fill(icon == ic ? Color.accentColor : Color(.systemGray6))
                                     )
                             }
+                            .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 4)
                 }
             }
             .navigationTitle("Add Item")
@@ -603,7 +605,7 @@ struct EditItemSheet: View {
                 Section("Category") {
                     Picker("Category", selection: $category) {
                         ForEach(ItemCategory.allCases) { cat in
-                            Label(cat.rawValue, systemImage: cat.icon).tag(cat.rawValue)
+                            Text(cat.rawValue).tag(cat.rawValue)
                         }
                     }
                 }
@@ -613,6 +615,8 @@ struct EditItemSheet: View {
                         ForEach(icons, id: \.self) { ic in
                             Button {
                                 icon = ic
+                                let gen = UISelectionFeedbackGenerator()
+                                gen.selectionChanged()
                             } label: {
                                 Image(systemName: ic)
                                     .font(.system(size: 22))
@@ -623,8 +627,10 @@ struct EditItemSheet: View {
                                             .fill(icon == ic ? Color.accentColor : Color(.systemGray6))
                                     )
                             }
+                            .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 4)
                 }
             }
             .navigationTitle("Edit Item")

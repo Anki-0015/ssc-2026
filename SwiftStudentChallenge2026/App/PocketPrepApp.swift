@@ -11,6 +11,7 @@ import SwiftData
 
 @main
 struct PocketPrepApp: App {
+    @AppStorage("appearanceMode") private var appearanceMode = 0 // 0=System, 1=Light, 2=Dark
     
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([PrepItem.self, PackingList.self])
@@ -35,9 +36,18 @@ struct PocketPrepApp: App {
         }
     }()
     
+    private var colorScheme: ColorScheme? {
+        switch appearanceMode {
+        case 1: return .light
+        case 2: return .dark
+        default: return nil
+        }
+    }
+    
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .preferredColorScheme(colorScheme)
         }
         .modelContainer(sharedModelContainer)
     }

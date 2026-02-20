@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var showClearConfirmation = false
     @State private var showResetOnboarding = false
     @State private var showClearedToast = false
+    @AppStorage("appearanceMode") private var appearanceMode = 0 // 0=System, 1=Light, 2=Dark
     
     var body: some View {
         NavigationStack {
@@ -68,6 +69,18 @@ struct SettingsView: View {
                     StatRow(icon: "checkmark.circle.fill", color: .green, label: "Items Packed", value: "\(listsViewModel.totalPackedItems)")
                     StatRow(icon: "chart.line.uptrend.xyaxis", color: .purple, label: "Completion", value: "\(listsViewModel.overallCompletionPercentage)%")
                     StatRow(icon: "tray.full.fill", color: .orange, label: "Total Items", value: "\(listsViewModel.totalItems)")
+                }
+                
+                // Appearance
+                Section("Appearance") {
+                    Picker("Theme", selection: $appearanceMode) {
+                        Label("System", systemImage: "gear").tag(0)
+                        Label("Light", systemImage: "sun.max.fill").tag(1)
+                        Label("Dark", systemImage: "moon.fill").tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }
                 
                 // Data Management

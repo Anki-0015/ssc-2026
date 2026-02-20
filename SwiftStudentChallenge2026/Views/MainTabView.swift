@@ -32,7 +32,7 @@ struct MainTabView: View {
                         .tabItem {
                             Label("My Lists", systemImage: "checklist")
                         }
-                        .badge(listsViewModel.totalUnpackedItems > 0 ? listsViewModel.totalUnpackedItems : 0)
+                        .badge(!listsViewModel.customLists.isEmpty && listsViewModel.totalUnpackedItems > 0 ? listsViewModel.totalUnpackedItems : 0)
                         .tag(1)
                     
                     AIAssistantView(listsViewModel: listsViewModel)

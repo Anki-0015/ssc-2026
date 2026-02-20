@@ -3,7 +3,7 @@
 //  PocketPrep
 //
 //  Competition-level home dashboard
-//  Animated stats, gradients, tips, active lists
+//  Progress ring, templates, active & completed lists
 //
 
 import SwiftUI
@@ -13,31 +13,54 @@ struct HomeView: View {
     @Binding var selectedTab: Int
     @AppStorage("userName") private var userName = ""
     @State private var animateStats = false
-    @State private var selectedTip: Int?
     @State private var showNewListSheet = false
+    @State private var showAllPastLists = false
+    
+    private var activeLists: [PackingList] {
+        listsViewModel.customLists.filter { $0.progress < 1.0 }
+    }
+    
+    private var completedLists: [PackingList] {
+        listsViewModel.customLists.filter { $0.progress >= 1.0 }
+    }
     
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 28) {
+                VStack(spacing: 24) {
                     // Header
                     headerSection
                     
-                    // Stats
-                    statsGrid
-                    
                     // Quick Actions
-                    quickActionsSection
+                    quickActionsRow
+                    
+                    // Past Lists (replaces welcome card)
+                    pastListsSection
+                    
+                    if !listsViewModel.customLists.isEmpty {
+                        // Progress Hero Card
+                        progressHeroCard
+                    }
+                    
+                    // Templates
+                    templatesCarousel
                     
                     // Active Lists
-                    if !listsViewModel.customLists.isEmpty {
+                    if !activeLists.isEmpty {
                         activeListsSection
                     }
                     
-                    // Tips
-                    tipsSection
+                    // Completed Lists
+                    if !completedLists.isEmpty {
+                        completedListsSection
+                    }
                     
-                    // Motivational footer
+                    // Tips (only when few lists)
+                    if listsViewModel.customLists.count < 3 {
+                        tipsSection
+                    }
+                    
+                    // Footer
                     motivationalFooter
                 }
                 .padding(.bottom, 32)
@@ -49,7 +72,7 @@ struct HomeView: View {
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.5).delay(0.2)) {
+            withAnimation(.easeOut(duration: 0.6).delay(0.2)) {
                 animateStats = true
             }
         }
@@ -80,115 +103,227 @@ struct HomeView: View {
     
     // MARK: - Quick Actions
     
-    private var quickActionsSection: some View {
-        HStack(spacing: 12) {
-            Button {
-                let gen = UIImpactFeedbackGenerator(style: .medium)
-                gen.impactOccurred()
+    private var quickActionsRow: some View {
+        HStack(spacing: 10) {
+            QuickActionButton(
+                icon: "plus.circle.fill",
+                label: "New List",
+                colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple]
+            ) {
                 showNewListSheet = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 20))
-                    Text("New List")
-                        .font(.subheadline.bold())
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#667eea") ?? .blue, Color(hex: "#764ba2") ?? .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: Color(hex: "#667eea")?.opacity(0.3) ?? .blue.opacity(0.3), radius: 8, y: 4)
-                )
             }
             
-            Button {
-                let gen = UIImpactFeedbackGenerator(style: .medium)
-                gen.impactOccurred()
+            QuickActionButton(
+                icon: "sparkles",
+                label: "Ask AI",
+                colors: [Color(hex: "#f093fb") ?? .pink, Color(hex: "#f5576c") ?? .red]
+            ) {
                 withAnimation { selectedTab = 2 }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 20))
-                    Text("Ask AI")
-                        .font(.subheadline.bold())
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#f093fb") ?? .pink, Color(hex: "#f5576c") ?? .red],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: Color(hex: "#f093fb")?.opacity(0.3) ?? .pink.opacity(0.3), radius: 8, y: 4)
-                )
+            }
+            
+            QuickActionButton(
+                icon: "checklist",
+                label: "My Lists",
+                colors: [Color(hex: "#43e97b") ?? .green, Color(hex: "#38f9d7") ?? .mint]
+            ) {
+                withAnimation { selectedTab = 1 }
             }
         }
         .padding(.horizontal, 20)
     }
     
-    // MARK: - Stats Grid
+    // MARK: - Past Lists
     
-    private var statsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-            StatCard(
-                icon: "checklist",
-                label: "Total Lists",
-                value: "\(listsViewModel.lists.count)",
-                color: .blue,
-                animate: animateStats
-            )
+    private var recentLists: [PackingList] {
+        listsViewModel.customLists.sorted { $0.createdAt > $1.createdAt }
+    }
+    
+    private var pastListsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(hex: "#667eea") ?? .blue)
+                
+                Text("Past Lists")
+                    .font(.subheadline.bold())
+                
+                if !recentLists.isEmpty {
+                    Text("\(recentLists.count)")
+                        .font(.caption2.bold())
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill((Color(hex: "#667eea") ?? .blue).gradient))
+                }
+                
+                Spacer()
+                
+                if recentLists.count > 3 {
+                    NavigationLink {
+                        AllPastListsView(lists: recentLists, viewModel: listsViewModel)
+                    } label: {
+                        Text("See All")
+                            .font(.caption.bold())
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
             
-            StatCard(
-                icon: "checkmark.circle.fill",
-                label: "Items Packed",
-                value: "\(listsViewModel.totalPackedItems)",
-                color: .green,
-                animate: animateStats
-            )
-            
-            StatCard(
-                icon: "doc.on.doc.fill",
-                label: "Templates",
-                value: "\(listsViewModel.templates.count)",
-                color: .orange,
-                animate: animateStats
-            )
-            
-            StatCard(
-                icon: "chart.line.uptrend.xyaxis",
-                label: "Completion",
-                value: "\(listsViewModel.overallCompletionPercentage)%",
-                color: .purple,
-                animate: animateStats
-            )
+            if recentLists.isEmpty {
+                // Compact empty state
+                HStack(spacing: 12) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary.opacity(0.5))
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("No lists yet")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.secondary)
+                        Text("Create a list or use a template below")
+                            .font(.caption)
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+                    
+                    Spacer()
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                )
+                .padding(.horizontal, 20)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(recentLists.prefix(3)) { list in
+                        NavigationLink(destination: ListDetailView(list: list, viewModel: listsViewModel)) {
+                            PastListRow(list: list)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
         }
+    }
+    
+    // MARK: - Progress Hero Card
+    
+    private var progressHeroCard: some View {
+        HStack(spacing: 20) {
+            // Circular progress ring
+            ZStack {
+                Circle()
+                    .stroke(Color(.systemGray5), lineWidth: 8)
+                    .frame(width: 80, height: 80)
+                
+                Circle()
+                    .trim(from: 0, to: animateStats ? progressValue : 0)
+                    .stroke(progressGradient, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                
+                VStack(spacing: 0) {
+                    Text("\(listsViewModel.overallCompletionPercentage)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .contentTransition(.numericText())
+                    Text("%")
+                        .font(.caption2.bold())
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            // Stats column
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 16) {
+                    MiniStat(icon: "checklist", value: "\(listsViewModel.customLists.count)", label: "Lists", color: .blue)
+                    MiniStat(icon: "checkmark.circle.fill", value: "\(listsViewModel.totalPackedItems)", label: "Packed", color: .green)
+                }
+                
+                HStack(spacing: 16) {
+                    MiniStat(icon: "circle", value: "\(listsViewModel.totalUnpackedItems)", label: "Left", color: .orange)
+                    MiniStat(icon: "tray.full.fill", value: "\(listsViewModel.totalItems)", label: "Total", color: .purple)
+                }
+            }
+            
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .shadow(color: .black.opacity(0.04), radius: 12, y: 4)
+        )
         .padding(.horizontal, 20)
+    }
+    
+    // MARK: - Templates Carousel
+    
+    private var templatesCarousel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "rectangle.stack.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.orange)
+                
+                Text("Quick Start Templates")
+                    .font(.subheadline.bold())
+                
+                Spacer()
+                
+                Button {
+                    withAnimation { selectedTab = 1 }
+                } label: {
+                    Text("See All")
+                        .font(.caption.bold())
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(listsViewModel.templates) { template in
+                        TemplateChip(template: template) {
+                            listsViewModel.duplicateTemplate(template)
+                            let gen = UINotificationFeedbackGenerator()
+                            gen.notificationOccurred(.success)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
     }
     
     // MARK: - Active Lists
     
     private var activeListsSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Active Lists")
-                .font(.title3.bold())
-                .padding(.horizontal, 20)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "tray.full.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.blue)
+                
+                Text("In Progress")
+                    .font(.subheadline.bold())
+                
+                Text("\(activeLists.count)")
+                    .font(.caption2.bold())
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.blue.gradient))
+                
+                Spacer()
+            }
+            .padding(.horizontal, 20)
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    ForEach(listsViewModel.customLists.prefix(6)) { list in
+                    ForEach(activeLists.prefix(8)) { list in
                         NavigationLink(destination: ListDetailView(list: list, viewModel: listsViewModel)) {
                             ActiveListCard(list: list)
                         }
@@ -200,13 +335,86 @@ struct HomeView: View {
         }
     }
     
+    // MARK: - Completed Lists
+    
+    private var completedListsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.green)
+                
+                Text("Completed")
+                    .font(.subheadline.bold())
+                
+                Text("\(completedLists.count)")
+                    .font(.caption2.bold())
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.green.gradient))
+                
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            
+            VStack(spacing: 8) {
+                ForEach(completedLists.prefix(5)) { list in
+                    NavigationLink(destination: ListDetailView(list: list, viewModel: listsViewModel)) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(list.color.opacity(0.15))
+                                    .frame(width: 38, height: 38)
+                                
+                                Image(systemName: list.icon)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(list.color)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(list.name)
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(.primary)
+                                
+                                Text("\(list.totalCount) items packed")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.green)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color(.secondarySystemGroupedBackground))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
     // MARK: - Tips
     
     private var tipsSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Packing Tips")
-                .font(.title3.bold())
-                .padding(.horizontal, 20)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.yellow)
+                
+                Text("Packing Tips")
+                    .font(.subheadline.bold())
+            }
+            .padding(.horizontal, 20)
             
             ForEach(Array(tips.enumerated()), id: \.offset) { index, tip in
                 TipCard(tip: tip, index: index)
@@ -215,24 +423,41 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Computed
+    // MARK: - Motivational Footer
+    
+    private var motivationalFooter: some View {
+        VStack(spacing: 6) {
+            Text(motivationalQuote.text)
+                .font(.footnote.italic())
+                .foregroundColor(.secondary.opacity(0.7))
+                .multilineTextAlignment(.center)
+            
+            Text("— \(motivationalQuote.author)")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary.opacity(0.5))
+        }
+        .padding(.horizontal, 40)
+        .padding(.vertical, 12)
+    }
+    
+    // MARK: - Computed Properties
     
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
         let name = userName.isEmpty ? "" : ", \(userName.trimmingCharacters(in: .whitespaces).split(separator: " ").first.map(String.init) ?? userName)"
         switch hour {
-        case 5..<12: return "Good Morning\(name) ☀️"
-        case 12..<17: return "Good Afternoon\(name) 🌤"
-        case 17..<21: return "Good Evening\(name) 🌅"
-        default: return "Good Night\(name) 🌙"
+        case 5..<12: return "Good Morning\(name) \u{2600}\u{FE0F}"
+        case 12..<17: return "Good Afternoon\(name) \u{1F324}"
+        case 17..<21: return "Good Evening\(name) \u{1F305}"
+        default: return "Good Night\(name) \u{1F319}"
         }
     }
     
     private var greetingSubtitle: String {
         let packed = listsViewModel.totalPackedItems
         let total = listsViewModel.totalItems
-        if total == 0 { return "Start by creating your first packing list!" }
-        if packed == total { return "All packed! You're ready to go! 🎉" }
+        if listsViewModel.customLists.isEmpty { return "Start by creating your first packing list!" }
+        if packed == total && total > 0 { return "All packed! You're ready to go! \u{1F389}" }
         return "\(total - packed) items left to pack across your lists"
     }
     
@@ -246,29 +471,28 @@ struct HomeView: View {
         }
     }
     
+    private var progressValue: CGFloat {
+        let total = listsViewModel.totalItems
+        guard total > 0 else { return 0 }
+        return CGFloat(listsViewModel.totalPackedItems) / CGFloat(total)
+    }
+    
+    private var progressGradient: AngularGradient {
+        let percentage = listsViewModel.overallCompletionPercentage
+        if percentage >= 100 {
+            return AngularGradient(colors: [.green, .mint, .green], center: .center)
+        } else if percentage >= 50 {
+            return AngularGradient(colors: [.blue, .cyan, .blue], center: .center)
+        }
+        return AngularGradient(colors: [.orange, .yellow, .orange], center: .center)
+    }
+    
     private let tips: [(icon: String, title: String, detail: String)] = [
         ("lightbulb.fill", "Roll, Don't Fold", "Rolling clothes saves 30% more space than folding and reduces wrinkles."),
         ("cube.box.fill", "Use Packing Cubes", "Organize items by category for quick access and efficient packing."),
         ("list.clipboard.fill", "Pack Night Before", "Prepare your bag the evening before to avoid morning rush."),
         ("scalemass.fill", "Weigh Your Bag", "Check airline limits to avoid surprise fees at the airport.")
     ]
-    
-    // MARK: - Motivational Footer
-    
-    private var motivationalFooter: some View {
-        VStack(spacing: 8) {
-            Text(motivationalQuote.text)
-                .font(.subheadline.italic())
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            Text("— \(motivationalQuote.author)")
-                .font(.caption2.bold())
-                .foregroundColor(.secondary.opacity(0.7))
-        }
-        .padding(.horizontal, 40)
-        .padding(.vertical, 16)
-    }
     
     private var motivationalQuote: (text: String, author: String) {
         let quotes: [(String, String)] = [
@@ -282,47 +506,126 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Stat Card
+// MARK: - Quick Action Button
 
-struct StatCard: View {
+struct QuickActionButton: View {
     let icon: String
     let label: String
-    let value: String
-    let color: Color
-    let animate: Bool
+    let colors: [Color]
+    let action: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
+        Button {
+            let gen = UIImpactFeedbackGenerator(style: .medium)
+            gen.impactOccurred()
+            action()
+        } label: {
+            VStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(color.gradient)
+                    .font(.system(size: 20, weight: .semibold))
+                Text(label)
+                    .font(.caption.bold())
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: colors,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
+                    .shadow(color: colors.first?.opacity(0.3) ?? .clear, radius: 8, y: 4)
+            )
+        }
+    }
+}
+
+// MARK: - Mini Stat
+
+struct MiniStat: View {
+    let icon: String
+    let value: String
+    let label: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 24, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(color.gradient)
+                )
+            
+            VStack(alignment: .leading, spacing: 0) {
+                Text(value)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .contentTransition(.numericText())
+                Text(label)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(minWidth: 70, alignment: .leading)
+    }
+}
+
+// MARK: - Template Chip
+
+struct TemplateChip: View {
+    let template: PackingList
+    let onUse: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(template.color.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    
+                    Image(systemName: template.icon)
+                        .font(.system(size: 15))
+                        .foregroundColor(template.color)
+                }
                 
-                Spacer()
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(template.name)
+                        .font(.caption.bold())
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    Text("\(template.items.count) items")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
             
-            Text(value)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-                .contentTransition(.numericText())
-            
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Button {
+                onUse()
+            } label: {
+                Text("Use Template")
+                    .font(.caption2.bold())
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule().fill(template.color.gradient)
+                    )
+            }
         }
-        .padding(16)
+        .padding(12)
+        .frame(width: 155)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 14)
                 .fill(Color(.secondarySystemGroupedBackground))
-                .shadow(color: color.opacity(0.1), radius: 8, y: 4)
         )
-        .scaleEffect(animate ? 1 : 0.85)
-        .opacity(animate ? 1 : 0)
     }
 }
 
@@ -337,10 +640,10 @@ struct ActiveListCard: View {
                 ZStack {
                     Circle()
                         .fill(list.color.opacity(0.15))
-                        .frame(width: 44, height: 44)
+                        .frame(width: 40, height: 40)
                     
                     Image(systemName: list.icon)
-                        .font(.system(size: 20))
+                        .font(.system(size: 18))
                         .foregroundColor(list.color)
                 }
                 
@@ -348,7 +651,7 @@ struct ActiveListCard: View {
                 
                 Text("\(Int(list.progress * 100))%")
                     .font(.caption.bold())
-                    .foregroundColor(list.progress == 1 ? .green : .secondary)
+                    .foregroundColor(list.progress >= 0.8 ? .green : .secondary)
             }
             
             Text(list.name)
@@ -361,21 +664,21 @@ struct ActiveListCard: View {
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color(.systemGray5))
-                        .frame(height: 6)
+                        .frame(height: 5)
                     
                     Capsule()
                         .fill(list.color.gradient)
-                        .frame(width: geo.size.width * CGFloat(list.progress), height: 6)
+                        .frame(width: geo.size.width * CGFloat(list.progress), height: 5)
                 }
             }
-            .frame(height: 6)
+            .frame(height: 5)
             
             Text("\(list.packedCount)/\(list.totalCount) items")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
         .padding(14)
-        .frame(width: 170)
+        .frame(width: 165)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.secondarySystemGroupedBackground))
@@ -399,9 +702,9 @@ struct TipCard: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: tip.icon)
-                    .font(.system(size: 18))
+                    .font(.system(size: 16))
                     .foregroundColor(.orange)
-                    .frame(width: 32)
+                    .frame(width: 28)
                 
                 Text(tip.title)
                     .font(.subheadline.bold())
@@ -413,5 +716,130 @@ struct TipCard: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
+    }
+}
+
+// MARK: - Past List Row
+
+struct PastListRow: View {
+    let list: PackingList
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(list.color.opacity(0.15))
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: list.icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(list.color)
+            }
+            
+            VStack(alignment: .leading, spacing: 3) {
+                Text(list.name)
+                    .font(.subheadline.bold())
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                HStack(spacing: 6) {
+                    Text(list.createdAt.formatted(.dateTime.month(.abbreviated).day()))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Text("·")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Text("\(list.totalCount) items")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Progress indicator
+            ZStack {
+                Circle()
+                    .stroke(Color(.systemGray5), lineWidth: 3)
+                    .frame(width: 32, height: 32)
+                
+                Circle()
+                    .trim(from: 0, to: list.progress)
+                    .stroke(list.color.gradient, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .frame(width: 32, height: 32)
+                    .rotationEffect(.degrees(-90))
+                
+                Text("\(Int(list.progress * 100))")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundColor(.secondary)
+            }
+            
+            Image(systemName: "chevron.right")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary.opacity(0.5))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+    }
+}
+
+// MARK: - All Past Lists View (See All)
+
+struct AllPastListsView: View {
+    let lists: [PackingList]
+    @ObservedObject var viewModel: ListsViewModel
+    
+    var body: some View {
+        List {
+            ForEach(lists) { list in
+                NavigationLink(destination: ListDetailView(list: list, viewModel: viewModel)) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(list.color.opacity(0.15))
+                                .frame(width: 40, height: 40)
+                            
+                            Image(systemName: list.icon)
+                                .font(.system(size: 16))
+                                .foregroundColor(list.color)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(list.name)
+                                .font(.subheadline.bold())
+                            
+                            HStack(spacing: 6) {
+                                Text(list.createdAt.formatted(.dateTime.month(.abbreviated).day().year()))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("·")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("\(list.packedCount)/\(list.totalCount) packed")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Text("\(Int(list.progress * 100))%")
+                            .font(.caption.bold())
+                            .foregroundColor(list.progress >= 1.0 ? .green : .secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .navigationTitle("All Lists")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
