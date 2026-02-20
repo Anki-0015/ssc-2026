@@ -26,33 +26,64 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    // Header
-                    headerSection
-                    
-                    // Ongoing Lists
-                    ongoingListsSection
-                    
-                    if !listsViewModel.customLists.isEmpty {
-                        // Progress Hero Card
-                        progressHeroCard
-                    }
-                    
-                    // Templates
-                    templatesCarousel
-                    
+            ZStack(alignment: .bottomTrailing) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        // Header
+                        headerSection
+                        
+                        // Ongoing Lists
+                        ongoingListsSection
+                        
+                        if !listsViewModel.customLists.isEmpty {
+                            // Progress Hero Card
+                            progressHeroCard
+                        }
+                        
+                        // Templates
+                        templatesCarousel
+                        
 
-                    
-                    // Tips (only when few lists)
-                    if listsViewModel.customLists.count < 3 {
-                        tipsSection
+                        
+                        // Tips (only when few lists)
+                        if listsViewModel.customLists.count < 3 {
+                            tipsSection
+                        }
+                        
+                        // Footer
+                        motivationalFooter
                     }
-                    
-                    // Footer
-                    motivationalFooter
+                    .padding(.bottom, 100) // extra padding so content isn't hidden behind FAB
                 }
-                .padding(.bottom, 32)
+                
+                // Floating Add Button
+                Button {
+                    let impact = UIImpactFeedbackGenerator(style: .medium)
+                    impact.impactOccurred()
+                    showNewListSheet = true
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "#667eea") ?? .indigo,
+                                        Color(hex: "#764ba2") ?? .purple
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 60, height: 60)
+                            .shadow(color: (Color(hex: "#764ba2") ?? .purple).opacity(0.4), radius: 10, x: 0, y: 5)
+                        
+                        Image(systemName: "plus")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 24)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("PocketPrep")
@@ -70,9 +101,9 @@ struct HomeView: View {
     // MARK: - Header
     
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(greeting)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(
                         colors: greetingColors,
@@ -80,10 +111,6 @@ struct HomeView: View {
                         endPoint: .trailing
                     )
                 )
-            
-            Text(greetingSubtitle)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
@@ -104,15 +131,15 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "tray.full.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(Color(hex: "#667eea") ?? .blue)
                 
                 Text("Ongoing Lists")
-                    .font(.subheadline.bold())
+                    .font(.callout.bold())
                 
                 if !ongoingLists.isEmpty {
                     Text("\(ongoingLists.count)")
-                        .font(.caption2.bold())
+                        .font(.caption.bold())
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -126,7 +153,7 @@ struct HomeView: View {
                         withAnimation { selectedTab = 1 }
                     } label: {
                         Text("See All")
-                            .font(.caption.bold())
+                            .font(.subheadline.bold())
                             .foregroundColor(.blue)
                     }
                 }
@@ -140,12 +167,12 @@ struct HomeView: View {
                         .font(.system(size: 24))
                         .foregroundColor(.secondary.opacity(0.5))
                     
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("No ongoing lists")
-                            .font(.subheadline.bold())
+                            .font(.callout.bold())
                             .foregroundColor(.secondary)
                         Text("All caught up! Create a new list below")
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundColor(.secondary.opacity(0.7))
                     }
                     
@@ -178,21 +205,21 @@ struct HomeView: View {
             // Circular progress ring
             ZStack {
                 Circle()
-                    .stroke(Color(.systemGray5), lineWidth: 8)
-                    .frame(width: 80, height: 80)
+                    .stroke(Color(.systemGray5), lineWidth: 9)
+                    .frame(width: 90, height: 90)
                 
                 Circle()
                     .trim(from: 0, to: animateStats ? progressValue : 0)
-                    .stroke(progressGradient, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .frame(width: 80, height: 80)
+                    .stroke(progressGradient, style: StrokeStyle(lineWidth: 9, lineCap: .round))
+                    .frame(width: 90, height: 90)
                     .rotationEffect(.degrees(-90))
                 
                 VStack(spacing: 0) {
                     Text("\(listsViewModel.overallCompletionPercentage)")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
                         .contentTransition(.numericText())
                     Text("%")
-                        .font(.caption2.bold())
+                        .font(.caption.bold())
                         .foregroundColor(.secondary)
                 }
             }
@@ -221,17 +248,17 @@ struct HomeView: View {
         .padding(.horizontal, 20)
     }
     
-    // MARK: - Templates Carousel
+    // MARK: - Templates
     
     private var templatesCarousel: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "rectangle.stack.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.orange)
                 
                 Text("Quick Start Templates")
-                    .font(.subheadline.bold())
+                    .font(.callout.bold())
                 
                 Spacer()
                 
@@ -239,24 +266,23 @@ struct HomeView: View {
                     withAnimation { selectedTab = 1 }
                 } label: {
                     Text("See All")
-                        .font(.caption.bold())
+                        .font(.subheadline.bold())
                         .foregroundColor(.blue)
                 }
             }
             .padding(.horizontal, 20)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(listsViewModel.templates.prefix(3)) { template in
-                        TemplateChip(template: template) {
-                            listsViewModel.duplicateTemplate(template)
-                            let gen = UINotificationFeedbackGenerator()
-                            gen.notificationOccurred(.success)
-                        }
+            HStack(spacing: 10) {
+                ForEach(listsViewModel.templates.prefix(3)) { template in
+                    TemplateChip(template: template) {
+                        listsViewModel.duplicateTemplate(template)
+                        let gen = UINotificationFeedbackGenerator()
+                        gen.notificationOccurred(.success)
                     }
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 20)
             }
+            .padding(.horizontal, 20)
         }
     }
     
@@ -419,7 +445,7 @@ struct HomeView: View {
         let packed = listsViewModel.totalPackedItems
         let total = listsViewModel.totalItems
         if listsViewModel.customLists.isEmpty { return "Start by creating your first packing list!" }
-        if packed == total && total > 0 { return "All packed! You're ready to go! \u{1F389}" }
+        if packed == total && total > 0 { return "\(total) items packed across \(listsViewModel.customLists.count) lists" }
         return "\(total - packed) items left to pack across your lists"
     }
     
@@ -481,24 +507,24 @@ struct MiniStat: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.white)
-                .frame(width: 24, height: 24)
+                .frame(width: 28, height: 28)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: 7)
                         .fill(color.gradient)
                 )
             
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(value)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
                     .contentTransition(.numericText())
                 Text(label)
-                    .font(.system(size: 10))
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
         }
-        .frame(minWidth: 70, alignment: .leading)
+        .frame(minWidth: 80, alignment: .leading)
     }
 }
 
@@ -509,47 +535,44 @@ struct TemplateChip: View {
     let onUse: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(template.color.opacity(0.15))
-                        .frame(width: 36, height: 36)
-                    
-                    Image(systemName: template.icon)
-                        .font(.system(size: 15))
-                        .foregroundColor(template.color)
-                }
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(template.color.opacity(0.15))
+                    .frame(width: 34, height: 34)
                 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(template.name)
-                        .font(.caption.bold())
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    
-                    Text("\(template.items.count) items")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Image(systemName: template.icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(template.color)
+            }
+            
+            VStack(spacing: 2) {
+                Text(template.name)
+                    .font(.caption.bold())
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                Text("\(template.items.count) items")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
             
             Button {
                 onUse()
             } label: {
-                Text("Use Template")
+                Text("Use")
                     .font(.caption2.bold())
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 5)
                     .background(
                         Capsule().fill(template.color.gradient)
                     )
             }
         }
-        .padding(12)
-        .frame(width: 155)
+        .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
     }
