@@ -535,22 +535,23 @@ struct TemplateChip: View {
     let onUse: () -> Void
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(template.color.opacity(0.15))
-                    .frame(width: 34, height: 34)
+                    .fill(template.color.opacity(0.18))
+                    .frame(width: 48, height: 48)
                 
                 Image(systemName: template.icon)
-                    .font(.system(size: 14))
+                    .font(.system(size: 20))
                     .foregroundColor(template.color)
             }
             
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 Text(template.name)
                     .font(.caption.bold())
                     .foregroundColor(.primary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 
                 Text("\(template.items.count) items")
                     .font(.caption2)
@@ -564,15 +565,15 @@ struct TemplateChip: View {
                     .font(.caption2.bold())
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 6)
                     .background(
                         Capsule().fill(template.color.gradient)
                     )
             }
         }
-        .padding(10)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 14)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
     }

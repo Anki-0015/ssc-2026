@@ -23,6 +23,9 @@ struct AIAssistantView: View {
     @State private var selectedSuggestions: Set<String> = []
     @State private var collapsedCategories: Set<String> = []
     
+    // Apple Intelligence availability
+    private let isModelAvailable = FoundationModelService.isAvailable
+    
     // Smart context state
     @State private var showContextPicker = false
     @State private var selectedTripType: TripContext.TripType = .travel
@@ -32,7 +35,11 @@ struct AIAssistantView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                chatView
+                if isModelAvailable {
+                    chatView
+                } else {
+                    appleIntelligenceUnavailableView
+                }
             }
             .navigationTitle("AI Assistant")
             .toolbar {
@@ -50,6 +57,98 @@ struct AIAssistantView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    // MARK: - Unavailable Screen
+    
+    private var appleIntelligenceUnavailableView: some View {
+        ScrollView {
+            VStack(spacing: 32) {
+                Spacer(minLength: 40)
+                
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Color(hex: "#764ba2")?.opacity(0.2) ?? .purple.opacity(0.2),
+                                    Color.clear
+                                ],
+                                center: .center,
+                                startRadius: 40,
+                                endRadius: 90
+                            )
+                        )
+                        .frame(width: 160, height: 160)
+                    
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(.systemGray4),
+                                    Color(.systemGray3)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 100, height: 100)
+                        .shadow(color: .black.opacity(0.12), radius: 20, y: 8)
+                    
+                    Image(systemName: "apple.intelligence")
+                        .font(.system(size: 40))
+                        .foregroundColor(.white)
+                }
+                
+                // Text block
+                VStack(spacing: 12) {
+                    Text("Apple Intelligence Required")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .multilineTextAlignment(.center)
+                    
+                    Text("This feature uses on-device AI powered by Apple Intelligence, available on iPhone 16 or later running iOS 26.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                        .padding(.horizontal, 8)
+                }
+                .padding(.horizontal, 32)
+                
+                // Info card
+                VStack(alignment: .leading, spacing: 14) {
+                    InfoRow(
+                        icon: "iphone",
+                        iconColor: .blue,
+                        title: "iPhone 16 or later",
+                        subtitle: "iPhone 16, 16 Plus, 16 Pro, or 16 Pro Max"
+                    )
+                    Divider()
+                    InfoRow(
+                        icon: "cpu",
+                        iconColor: .purple,
+                        title: "iOS 26 required",
+                        subtitle: "Update your device in Settings → General → Software Update"
+                    )
+                    Divider()
+                    InfoRow(
+                        icon: "wifi.slash",
+                        iconColor: .green,
+                        title: "Fully offline",
+                        subtitle: "All processing happens on your device — no internet needed"
+                    )
+                }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                )
+                .padding(.horizontal, 24)
+                
+                Spacer(minLength: 40)
             }
         }
     }
@@ -997,5 +1096,37 @@ struct FlowLayout: Layout {
         var positions: [CGPoint]
         var sizes: [CGSize]
         var size: CGSize
+    }
+}
+
+// MARK: - Info Row (used in Apple Intelligence unavailable screen)
+
+struct InfoRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let subtitle: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(iconColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(iconColor)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.bold())
+                    .foregroundColor(.primary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineSpacing(2)
+            }
+        }
     }
 }
