@@ -45,10 +45,8 @@ struct HomeView: View {
                         
 
                         
-                        // Tips (only when few lists)
-                        if listsViewModel.customLists.count < 3 {
-                            tipsSection
-                        }
+                        // Tips
+                        tipsSection
                         
                         // Footer
                         motivationalFooter
@@ -166,9 +164,7 @@ struct HomeView: View {
                 Spacer()
                 
                 if ongoingLists.count > 3 {
-                    Button {
-                        withAnimation { selectedTab = 1 }
-                    } label: {
+                    NavigationLink(destination: AllOngoingListsView(lists: ongoingLists, viewModel: listsViewModel)) {
                         Text("See All")
                             .font(.subheadline.bold())
                             .foregroundColor(.blue)
@@ -808,5 +804,26 @@ struct AllPastListsView: View {
         }
         .navigationTitle("All Lists")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - All Ongoing Lists View (See All)
+
+struct AllOngoingListsView: View {
+    let lists: [PackingList]
+    @ObservedObject var viewModel: ListsViewModel
+
+    var body: some View {
+        List {
+            ForEach(lists) { list in
+                NavigationLink(destination: ListDetailView(list: list, viewModel: viewModel)) {
+                    PastListRow(list: list)
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .navigationTitle("Ongoing Lists")
+        .navigationBarTitleDisplayMode(.large)
     }
 }
