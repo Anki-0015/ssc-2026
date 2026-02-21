@@ -100,37 +100,6 @@ struct SettingsView: View {
                     }
                 }
                 
-                // About Section
-                Section("About") {
-                    HStack {
-                        Label("Version", systemImage: "info.circle")
-                        Spacer()
-                        Text("1.0.0")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Label("Built With", systemImage: "swift")
-                        Spacer()
-                        Text("SwiftUI & SwiftData")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Label("AI Engine", systemImage: "sparkles")
-                        Spacer()
-                        Text("Apple Intelligence")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Label("Platform", systemImage: "ipad")
-                        Spacer()
-                        Text("iPad · iOS 26+")
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
                 // Credits
                 Section {
                     VStack(spacing: 12) {
@@ -159,6 +128,11 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .lineSpacing(3)
+                        
+                        Text("Version 1.0.0")
+                            .font(.caption2)
+                            .foregroundColor(Color(.tertiaryLabel))
+                            .padding(.top, 4)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
