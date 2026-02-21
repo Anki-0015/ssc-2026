@@ -126,6 +126,23 @@ struct HomeView: View {
             .filter { $0.progress < 1.0 }
             .sorted { $0.createdAt > $1.createdAt }
     }
+
+    private var ongoingTotalItems: Int {
+        ongoingLists.flatMap(\.items).count
+    }
+
+    private var ongoingPackedItems: Int {
+        ongoingLists.flatMap(\.items).filter(\.isPacked).count
+    }
+
+    private var ongoingUnpackedItems: Int {
+        ongoingTotalItems - ongoingPackedItems
+    }
+
+    private var ongoingCompletionPercentage: Int {
+        guard ongoingTotalItems > 0 else { return 0 }
+        return Int(Double(ongoingPackedItems) / Double(ongoingTotalItems) * 100)
+    }
     
     private var ongoingListsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -215,7 +232,7 @@ struct HomeView: View {
                     .rotationEffect(.degrees(-90))
                 
                 VStack(spacing: 0) {
-                    Text("\(listsViewModel.overallCompletionPercentage)")
+                    Text("\(ongoingCompletionPercentage)")
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .contentTransition(.numericText())
                     Text("%")
@@ -227,13 +244,13 @@ struct HomeView: View {
             // Stats column
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 16) {
-                    MiniStat(icon: "checklist", value: "\(listsViewModel.customLists.count)", label: "Lists", color: .blue)
-                    MiniStat(icon: "checkmark.circle.fill", value: "\(listsViewModel.totalPackedItems)", label: "Packed", color: .green)
+                    MiniStat(icon: "checklist", value: "\(ongoingLists.count)", label: "Lists", color: .blue)
+                    MiniStat(icon: "checkmark.circle.fill", value: "\(ongoingPackedItems)", label: "Packed", color: .green)
                 }
                 
                 HStack(spacing: 16) {
-                    MiniStat(icon: "circle", value: "\(listsViewModel.totalUnpackedItems)", label: "Left", color: .orange)
-                    MiniStat(icon: "tray.full.fill", value: "\(listsViewModel.totalItems)", label: "Total", color: .purple)
+                    MiniStat(icon: "circle", value: "\(ongoingUnpackedItems)", label: "Left", color: .orange)
+                    MiniStat(icon: "tray.full.fill", value: "\(ongoingTotalItems)", label: "Total", color: .purple)
                 }
             }
             
@@ -442,11 +459,12 @@ struct HomeView: View {
     }
     
     private var greetingSubtitle: String {
-        let packed = listsViewModel.totalPackedItems
-        let total = listsViewModel.totalItems
         if listsViewModel.customLists.isEmpty { return "Start by creating your first packing list!" }
-        if packed == total && total > 0 { return "\(total) items packed across \(listsViewModel.customLists.count) lists" }
-        return "\(total - packed) items left to pack across your lists"
+        if ongoingLists.isEmpty { return "All lists are packed — you're ready to go!" }
+        if ongoingPackedItems == ongoingTotalItems && ongoingTotalItems > 0 {
+            return "\(ongoingTotalItems) items packed across \(ongoingLists.count) ongoing lists"
+        }
+        return "\(ongoingUnpackedItems) items left to pack across \(ongoingLists.count) ongoing lists"
     }
     
     private var greetingColors: [Color] {
@@ -460,13 +478,12 @@ struct HomeView: View {
     }
     
     private var progressValue: CGFloat {
-        let total = listsViewModel.totalItems
-        guard total > 0 else { return 0 }
-        return CGFloat(listsViewModel.totalPackedItems) / CGFloat(total)
+        guard ongoingTotalItems > 0 else { return 0 }
+        return CGFloat(ongoingPackedItems) / CGFloat(ongoingTotalItems)
     }
     
     private var progressGradient: AngularGradient {
-        let percentage = listsViewModel.overallCompletionPercentage
+        let percentage = ongoingCompletionPercentage
         if percentage >= 100 {
             return AngularGradient(colors: [.green, .mint, .green], center: .center)
         } else if percentage >= 50 {
