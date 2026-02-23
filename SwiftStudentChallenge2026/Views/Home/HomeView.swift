@@ -272,16 +272,6 @@ struct HomeView: View {
                 
                 Text("Quick Start Templates")
                     .font(.callout.bold())
-                
-                Spacer()
-                
-                Button {
-                    withAnimation { selectedTab = 1 }
-                } label: {
-                    Text("See All")
-                        .font(.subheadline.bold())
-                        .foregroundColor(.blue)
-                }
             }
             .padding(.horizontal, 20)
             
